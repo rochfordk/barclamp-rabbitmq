@@ -37,10 +37,29 @@ class RabbitmqService < ServiceObject
     nodes = NodeObject.all
     nodes.delete_if { |n| n.nil? }
     nodes.delete_if { |n| n.admin? } if nodes.size > 1
-    head = nodes.shift
-    base["deployment"]["rabbitmq"]["elements"] = {
-      "rabbitmq-server" => [ head.name ]
-    }
+    # build cluster if more then one node is specified
+    if nodes.size > 1
+		# KR-TODO: SET THE RABBIT_MQ SERVER NAME
+		#	base["deployment"]["rabbitmq"]["elements"] = {"rabbitmq-server" => [ head.name ]}
+		
+		# set clustering to 'true'
+		base["deployment"]["rabbitmq"]["elements"] = true
+		# build string of cluster nodes and set attribute e.g. ['rabbit@node1', 'rabbit@node2', 'rabbit@node3']
+		#clusterNodes = "["
+		clusterNodes=[]
+		nodes.each do |node|
+			#clusterNodes + "'rabbit@"+node.name+"',"
+			clusterNodes.push("'rabbit@"+node.name+"'")
+		end
+		#clusterNodes = "]"
+		base["deployment"]["rabbitmq"]["cluster_disk_nodes"] = clusterNodes
+
+	else
+		head = nodes.shift
+		base["deployment"]["rabbitmq"]["elements"] = {
+			"rabbitmq-server" => [ head.name ]
+		}
+    end
 
     @logger.debug("Rabbitmq create_proposal: exiting")
     base
