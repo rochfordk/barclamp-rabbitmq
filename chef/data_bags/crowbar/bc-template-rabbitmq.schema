@@ -16,7 +16,7 @@
             "password": { "type": "str" },
             "user": { "type": "str", "required": true },
             "vhost": { "type": "str", "required": true },
-            "cluster": { "type": "boolean", "required": true }, 
+            "cluster": { "type": "int", "required": true }, 
 		"erlang_cookie": { "type": "str", "required": true },
 		"cluster_disk_nodes": { "type": "str", "required": true }
           }
