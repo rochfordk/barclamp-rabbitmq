@@ -43,7 +43,7 @@ class RabbitmqService < ServiceObject
 		#	base["deployment"]["rabbitmq"]["elements"] = {"rabbitmq-server" => [ head.name ]}
 		
 		# set clustering to 'true'
-		base["deployment"]["rabbitmq"]["elements"] = true
+		base["attributes"]["rabbitmq"]["cluster"] = true
 		# build string of cluster nodes and set attribute e.g. ['rabbit@node1', 'rabbit@node2', 'rabbit@node3']
 		#clusterNodes = "["
 		clusterNodes=[]
@@ -52,7 +52,7 @@ class RabbitmqService < ServiceObject
 			clusterNodes.push("'rabbit@"+node.name+"'")
 		end
 		#clusterNodes = "]"
-		base["deployment"]["rabbitmq"]["cluster_disk_nodes"] = clusterNodes
+		base["attributes"]["rabbitmq"]["cluster_disk_nodes"] = clusterNodes
 
 	else
 		head = nodes.shift
