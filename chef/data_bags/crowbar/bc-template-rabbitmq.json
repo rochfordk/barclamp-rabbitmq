@@ -6,7 +6,10 @@
       "port": 5672,
       "password": "",
       "user": "nova",
-      "vhost": "/nova"
+      "vhost": "/nova",
+      "cluster": true, 
+      "erlang_cookie": "AnyAlphaNumericStringWillDoKJR2",
+      "cluster_disk_nodes": []
     }
   },
   "deployment": {

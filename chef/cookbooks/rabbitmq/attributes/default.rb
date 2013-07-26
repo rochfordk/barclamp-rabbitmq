@@ -1,39 +1,84 @@
-#
-# Cookbook Name:: rabbitmq
-# Attributes:: default
-#
-# Copyright 2008-2011, Opscode, Inc.
-# Copyright 2011-2013, Dell, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# Latest RabbitMQ.com version to install
+default['rabbitmq']['version'] = '3.0.4'
+# The distro versions may be more stable and have back-ported patches
+default['rabbitmq']['use_distro_version'] = false
 
-#::Chef::Node.send(:include, Opscode::OpenSSL::Password)
+# being nil, the rabbitmq defaults will be used
+default['rabbitmq']['nodename']  = nil
+default['rabbitmq']['address']  = nil
+default['rabbitmq']['port']  = nil
+default['rabbitmq']['config'] = nil
+default['rabbitmq']['logdir'] = nil
+default['rabbitmq']['mnesiadir'] = "/var/lib/rabbitmq/mnesia"
+default['rabbitmq']['service_name'] = 'rabbitmq-server'
 
-#
-# RabbitMQ Settings
-#
-#set_unless[:rabbitmq][:password] = secure_password
-default[:rabbitmq][:user] = "nova"
-default[:rabbitmq][:vhost] = "/nova"
+# config file location
+# http://www.rabbitmq.com/configure.html#define-environment-variables
+# "The .config extension is automatically appended by the Erlang runtime."
+default['rabbitmq']['config_root'] = "/etc/rabbitmq"
+default['rabbitmq']['config'] = "/etc/rabbitmq/rabbitmq"
+default['rabbitmq']['erlang_cookie_path'] = '/var/lib/rabbitmq/.erlang.cookie'
 
-default[:rabbitmq][:nodename]  = node[:hostname]
-default[:rabbitmq][:address]  = nil
-default[:rabbitmq][:port]  = nil
-default[:rabbitmq][:configfile] = nil
-default[:rabbitmq][:logdir] = nil
-default[:rabbitmq][:mnesiadir] = nil
+# rabbitmq.config defaults
+default['rabbitmq']['default_user'] = 'guest'
+default['rabbitmq']['default_pass'] = 'guest'
+
 #clustering
-default[:rabbitmq][:cluster] = "no"
-default[:rabbitmq][:cluster_config] = "/etc/rabbitmq/rabbitmq_cluster.config"
-default[:rabbitmq][:cluster_disk_nodes] = []
+#default['rabbitmq']['cluster'] = true 
+#default['rabbitmq']['cluster_disk_nodes'] = ['rabbit@node1', 'rabbit@node2', 'rabbit@node3']
+#default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDoKJR'
+
+default['rabbitmq']['cluster'] = false 
+default['rabbitmq']['cluster_disk_nodes'] = []
+default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDoKJR'
+
+# resource usage
+default['rabbitmq']['disk_free_limit_relative'] = nil
+default['rabbitmq']['vm_memory_high_watermark'] = nil
+
+#ssl
+default['rabbitmq']['ssl'] = false
+default['rabbitmq']['ssl_port'] = 5671
+default['rabbitmq']['ssl_cacert'] = '/path/to/cacert.pem'
+default['rabbitmq']['ssl_cert'] = '/path/to/cert.pem'
+default['rabbitmq']['ssl_key'] = '/path/to/key.pem'
+default['rabbitmq']['ssl_verify'] = 'verify_none'
+default['rabbitmq']['ssl_fail_if_no_peer_cert'] = false
+
+#virtualhosts
+default['rabbitmq']['virtualhosts'] = []
+
+#users
+default['rabbitmq']['enabled_users'] =
+  [{ :name => "guest", :password => "guest", :rights =>
+    [{:vhost => nil , :conf => ".*", :write => ".*", :read => ".*"}]
+  }]
+default['rabbitmq']['disabled_users'] =[]
+
+#plugins
+default['rabbitmq']['enabled_plugins'] = ['rabbitmq_management']
+default['rabbitmq']['disabled_plugins'] = []
+
+#platform specific settings
+case node['platform_family']
+when 'debian'
+  default['rabbitmq']['package'] = "https://www.rabbitmq.com/releases/rabbitmq-server/v#{node['rabbitmq']['version']}/rabbitmq-server_#{node['rabbitmq']['version']}-1_all.deb"
+when 'rhel'
+  default['rabbitmq']['package'] = "https://www.rabbitmq.com/releases/rabbitmq-server/v#{node['rabbitmq']['version']}/rabbitmq-server-#{node['rabbitmq']['version']}-1.noarch.rpm"
+
+when 'smartos'
+  default['rabbitmq']['service_name'] = 'rabbitmq'
+  default['rabbitmq']['config_root'] = '/opt/local/etc/rabbitmq'
+  default['rabbitmq']['config'] = '/opt/local/etc/rabbitmq/rabbitmq'
+  default['rabbitmq']['erlang_cookie_path'] = '/var/db/rabbitmq/.erlang.cookie'
+end
+
+# Example HA policies
+default['rabbitmq']['policies']['ha-all']['pattern'] = "^(?!amq\\.).*"
+default['rabbitmq']['policies']['ha-all']['params'] = { "ha-mode" => "all" }
+default['rabbitmq']['policies']['ha-all']['priority'] = 0
+
+default['rabbitmq']['policies']['ha-two']['pattern'] = "^two\."
+default['rabbitmq']['policies']['ha-two']['params'] = { "ha-mode" => "exactly", "ha-params" => 2 }
+default['rabbitmq']['policies']['ha-two']['priority'] = 1
+

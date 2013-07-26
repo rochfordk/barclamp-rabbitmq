@@ -3,7 +3,8 @@
 # Recipe:: default
 #
 # Copyright 2009, Benjamin Black
-# Copyright 2009-2011, Opscode, Inc.
+# Copyright 2009-2013, Opscode, Inc.
+# Copyright 2012, Kevin Nuckolls <kevin.nuckolls@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,62 +19,125 @@
 # limitations under the License.
 #
 
-## use the RabbitMQ repository instead of Ubuntu or Debian's
-## because there are very useful features in the newer versions
-#apt_repository "rabbitmq" do
-#  uri "http://www.rabbitmq.com/debian/"
-#  distribution "testing"
-#  components ["main"]
-#  key "http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
-#  action :add
-#end
+include_recipe 'erlang'
 
-# rabbitmq-server is not well-behaved as far as managed services goes
-# we'll need to add a LWRP for calling rabbitmqctl stop
-# while still using /etc/init.d/rabbitmq-server start
-# because of this we just put the rabbitmq-env.conf in place and let it rip
+case node['platform_family']
+when 'debian'
+  # installs the required setsid command -- should be there by default but just in case
+  package 'util-linux'
 
-directory "/etc/rabbitmq/" do
-  owner "root"
-  group "root"
-  mode 0755
-  action :create
-end
+  if node['rabbitmq']['use_distro_version']
 
-template "/etc/rabbitmq/rabbitmq-env.conf" do
-  source "rabbitmq-env.conf.erb"
-  owner "root"
-  group "root"
-  mode 0644
-end  
+    package 'rabbitmq-server'
 
-template "/etc/rabbitmq/rabbitmq.config" do
-  source "rabbitmq.config.erb"
-  owner "root"
-  group "root"
-  mode 0644
-end
+  else
 
-user "rabbitmq" do
-  action :create
-  home "/var/lib/rabbitmq"
-end
+    remote_file "#{Chef::Config[:file_cache_path]}/rabbitmq-server_#{node['rabbitmq']['version']}-1_all.deb" do
+      source node['rabbitmq']['package']
+      action :create_if_missing
+    end
 
-%w{ /var/log/rabbitmq /var/lib/rabbitmq }.each { |dir|
-  directory dir do
-    action :create
-    owner "rabbitmq"
-    group "rabbitmq"
+    dpkg_package "#{Chef::Config[:file_cache_path]}/rabbitmq-server_#{node['rabbitmq']['version']}-1_all.deb"
+
   end
-}
 
-package "rabbitmq-server"
+when 'rhel', 'fedora'
 
-bash "Enable rabbit management" do
-  code <<-'EOH'
-/usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management
-/etc/init.d/rabbitmq-server restart
-exit 0
-EOH
-  not_if "su - rabbitmq -s /bin/bash -c \"/usr/lib/rabbitmq/bin/rabbitmq-plugins list -E\" | grep -q rabbitmq_management"
+  if node['rabbitmq']['use_distro_version'] then
+
+    package 'rabbitmq-server'
+
+  else
+
+    remote_file "#{Chef::Config[:file_cache_path]}/rabbitmq-server-#{node['rabbitmq']['version']}-1.noarch.rpm" do
+      source node['rabbitmq']['package']
+      action :create_if_missing
+    end
+
+    rpm_package "#{Chef::Config[:file_cache_path]}/rabbitmq-server-#{node['rabbitmq']['version']}-1.noarch.rpm"
+
+  end
+
+when 'smartos'
+
+  package 'rabbitmq'
+
+  service 'epmd' do
+    action :start
+  end
+
+  service node['rabbitmq']['service_name'] do
+    action :start
+  end
+
 end
+
+directory node['rabbitmq']['mnesiadir'] do
+  owner 'rabbitmq'
+  group 'rabbitmq'
+  mode '775'
+  recursive true
+end
+
+## You'll see setsid used in all the init statements in this cookbook. This
+## is because there is a problem with the stock init script in the RabbitMQ
+## debian package (at least in 2.8.2) that makes it not daemonize properly
+## when called from chef. The setsid command forces the subprocess into a state
+## where it can daemonize properly. -Kevin (thanks to Daniel DeLeo for the help)
+service node['rabbitmq']['service_name'] do
+  start_command 'setsid /etc/init.d/rabbitmq-server start'
+  stop_command 'setsid /etc/init.d/rabbitmq-server stop'
+  restart_command 'setsid /etc/init.d/rabbitmq-server restart'
+  status_command 'setsid /etc/init.d/rabbitmq-server status'
+  supports :status => true, :restart => true
+  action [ :enable, :start ]
+  not_if { platform?('smartos') }
+end
+
+template "#{node['rabbitmq']['config_root']}/rabbitmq-env.conf" do
+  source 'rabbitmq-env.conf.erb'
+  owner 'root'
+  group 'root'
+  mode 00644
+  notifies :restart, "service[#{node['rabbitmq']['service_name']}]"
+end
+
+template "#{node['rabbitmq']['config_root']}/rabbitmq.config" do
+  source 'rabbitmq.config.erb'
+  owner 'root'
+  group 'root'
+  mode 00644
+  notifies :restart, "service[#{node['rabbitmq']['service_name']}]"
+end
+
+if File.exists?(node['rabbitmq']['erlang_cookie_path'])
+  existing_erlang_key =  File.read(node['rabbitmq']['erlang_cookie_path'])
+else
+  existing_erlang_key = ''
+end
+
+#Chef::Log.info("COE-Log: Testing for Cluster block. Cluster: #{node['rabbitmq']['cluster']} Cookie:#{node['rabbitmq']['erlang_cookie'] != existing_erlang_key} Key: " + existing_erlang_key)
+if node['rabbitmq']['cluster'] && (node['rabbitmq']['erlang_cookie'] != existing_erlang_key)
+  service "stop #{node['rabbitmq']['service_name']}" do
+    service_name node['rabbitmq']['service_name']
+    pattern node['rabbitmq']['service_name']
+    #Chef::Log.info("COE-Log: cluster - Stopping #{node['rabbitmq']['service_name']}")
+    action :stop
+  end
+
+  template node['rabbitmq']['erlang_cookie_path'] do
+    source 'doterlang.cookie.erb'
+    owner 'rabbitmq'
+    group 'rabbitmq'
+    mode 00400
+    notifies :start, "service[#{node['rabbitmq']['service_name']}]", :immediately
+    notifies :run, "execute[reset-node]", :immediately
+  end
+
+  # Need to reset for clustering #
+  execute "reset-node" do
+    command "rabbitmqctl stop_app && rabbitmqctl reset && rabbitmqctl start_app"
+    action :nothing
+  end
+end
+
