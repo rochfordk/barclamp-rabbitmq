@@ -9,7 +9,7 @@
       "vhost": "/nova",
       "cluster": true, 
       "erlang_cookie": "AnyAlphaNumericStringWillDoKJR2",
-      "cluster_disk_nodes": []
+      "cluster_disk_nodes": [ ]
     }
   },
   "deployment": {
