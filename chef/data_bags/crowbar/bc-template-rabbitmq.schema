@@ -17,8 +17,8 @@
             "user": { "type": "str", "required": true },
             "vhost": { "type": "str", "required": true },
             "cluster": { "type": "str", "required": true }, 
-			"erlang_cookie": { "type": "str", "required": true },
-			"cluster_disk_nodes": { "type": "str", "required": true },
+		"erlang_cookie": { "type": "str", "required": true },
+		"cluster_disk_nodes": { "type": "str", "required": true }
           }
         }
       }
