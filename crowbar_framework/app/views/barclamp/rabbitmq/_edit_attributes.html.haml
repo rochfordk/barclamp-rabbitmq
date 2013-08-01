@@ -16,3 +16,6 @@
     %p
       %label{ :for => :password }= t('.password')
       %input#password{:type => "text", :name => "password", :'data-default' => @proposal.raw_data['attributes'][@proposal.barclamp]["password"], :onchange => "update_value('password','password', 'string')"}
+    %p
+      %label{ :for => :erlang_cookie }= t('.erlang_cookie')
+      %input#password{:type => "text", :name => "erlang_cookie", :'data-default' => @proposal.raw_data['attributes'][@proposal.barclamp]["erlang_cookie"], :onchange => "update_value('erlang_cookie','erlang_cookie', 'string')"}
