@@ -26,11 +26,11 @@ default['rabbitmq']['default_pass'] = 'guest'
 #clustering
 #default['rabbitmq']['cluster'] = true 
 #default['rabbitmq']['cluster_disk_nodes'] = ['rabbit@node1', 'rabbit@node2', 'rabbit@node3']
-#default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDoKJR'
+#default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDoKJRattributes'
 
 default['rabbitmq']['cluster'] = false 
 default['rabbitmq']['cluster_disk_nodes'] = []
-default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDoKJR'
+default['rabbitmq']['erlang_cookie'] = 'AnyAlphaNumericStringWillDo2'
 
 # resource usage
 default['rabbitmq']['disk_free_limit_relative'] = nil

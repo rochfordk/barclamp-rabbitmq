@@ -8,7 +8,7 @@
       "user": "nova",
       "vhost": "/nova",
       "cluster": true, 
-      "erlang_cookie": "AnyAlphaNumericStringWillDoKJR2",
+      "erlang_cookie": "AnyAlphaNumericStringWillDoKJR-template-json",
       "cluster_disk_nodes": [ ]
     }
   },
